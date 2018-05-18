@@ -12,6 +12,7 @@ import chainer
 import chainer.links as L
 import chainer.functions as F
 from chainer.iterators import SerialIterator
+from chainer import initializers
 from chainer.cuda import to_cpu
 
 import multiprocessing

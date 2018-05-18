@@ -13,19 +13,29 @@ class MLP(chainer.Chain):
     def __init__(self, hs, out=10):
         super(MLP, self).__init__()
         with self.init_scope():
-            self.ls = chainer.ChainList(
-                *[L.Linear(None, h) for h in hs + [out]])
+            self.hs = hs + [10]
+            for i, h in enumerate(self.hs):
+                n_in = 784 if i == 0 else hs[i-1]
+                setattr(self, 'w{}'.format(i),
+                        chainer.Parameter(
+                            initializers.Normal(scale=np.sqrt(1./n_in)), (h, n_in)))
+                setattr(self, 'b{}'.format(i),
+                        chainer.Parameter(initializers.Zero(), (h,)))
 
     def forward(self, x, keep_val=False):
         if keep_val:
             vals = []
 
-        for l in self.ls[:-1]:
-            x = F.arctan(l(x))
+        for i in range(len(self.hs) - 1):
+            w = getattr(self, 'w{}'.format(i))
+            b = getattr(self, 'b{}'.format(i))
+            x = F.arctan(F.linear(x, w, b))
             if keep_val:
                 vals.append(x)
 
-        output = self.ls[-1](x)
+        w = getattr(self, 'w{}'.format(len(self.hs) - 1))
+        b = getattr(self, 'b{}'.format(len(self.hs) - 1))
+        output = F.linear(x, w, b)
         if keep_val:
             vals.append(output)
 
