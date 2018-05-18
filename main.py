@@ -28,8 +28,7 @@ def train_model(model, train_iter, test_xs, test_ys,
                 hiddens.append(hidden.data[()])
             hiddens_list.append(hiddens)
         if (epoch + 1) % 100 == 0:
-            print('ITER {}, EPOCH {}, ACC {:.5f}'.format(
-                it + 1, epoch + 1, acc.data[()]))
+            print('EPOCH {}, ACC {:.5f}'.format(epoch + 1, acc.data[()]))
     return hiddens_list
 
 def plot_planes(planes, es, hs, feature):
@@ -68,7 +67,7 @@ def plot_planes(planes, es, hs, feature):
         for l in range(len(hs)):
             mask = _ls == l
             plt.plot(_xs[mask], _ys[mask], color=COLORS[l])
-        plt.savefig('{}_iter{}.png'.format(feature, it))
+        plt.savefig('{}.png'.format(feature))
 
 def run(hs, gpu, iters, epochs, snaps, batchsize, lr):
     planes = []
@@ -93,12 +92,11 @@ def run(hs, gpu, iters, epochs, snaps, batchsize, lr):
                          Ts_list, bins)
         planes.append(points)
 
-    feature = '{}_iter{}_epoch{}'.format('_'.join([str(h) for h in hs]),
-                                         iters, epochs)
+    feature = '{}_epoch{}_bs{}_lr{}'.format(
+        '_'.join([str(h) for h in hs]), epochs, batchsize, lr)
     np.save('{}.npy'.format(feature), [planes, Ts_index[:-1]], hs)
     plot_planes(planes, Ts_index[:-1], hs, feature)
     pr('')
-    # print('please execute: `convert -delay 30 *.png {}.gif`'.format(feature))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

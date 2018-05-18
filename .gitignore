@@ -2,3 +2,4 @@
 *.png
 *.gif
 *__pycache__
+*.npy
