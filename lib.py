@@ -7,6 +7,8 @@ import time
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.spatial.distance import pdist, squareform
+from sklearn.metrics.pairwise import rbf_kernel
 
 import chainer
 import chainer.links as L

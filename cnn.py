@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from lib import *
 from mi import calc_mi
-from utility import pr, tuple2array, MLP, calc_mmds
+from utility import pr, tuple2array, CNN, calc_mmds, calc_kls
 
 COLORS = ['y', 'r', 'k', 'g', 'b', 'c', 'm', 'grey']
 
@@ -31,55 +31,31 @@ def train_model(model, train_iter, test_xs, test_ys,
             print('EPOCH {}, ACC {:.5f}'.format(epoch + 1, acc.data[()]))
     return hiddens_list
 
-def plot_planes(points, es, hs, feature):
-    '''
-    for i, epoch in enumerate(es):
-        plt.clf()
-        for points in planes:
-            _xs = np.array([p['ixt'] for p in points])
-            _ys = np.array([p['ity'] for p in points])
-            _es = np.array([p['epoch'] for p in points])
-            mask = _es == i
-            plt.scatter(_xs[mask], _ys[mask], color=COLORS[:sum(mask)])
-            plt.title('EPOCH {}'.format(epoch))
-            plt.xlim(12.5, 13.5)
-            plt.ylim(3.15, 3.35)
-        plt.savefig('plane_epoch{:07d}.png'.format(epoch))
-
-    plt.clf()
-    for i, epoch in enumerate(es):
-        for points in planes:
-            _xs = np.array([p['ixt'] for p in points])
-            _ys = np.array([p['ity'] for p in points])
-            _es = np.array([p['epoch'] for p in points])
-            mask = _es == i
-            plt.scatter(_xs[mask], _ys[mask], color=COLORS[:sum(mask)])
-    plt.xlim(12, 14)
-    plt.ylim(3, 3.35)
-    plt.title('ALL')
-    plt.savefig('plane.png')
-    '''
+def plot_planes(points, es, feature):
+    print('Plotting')
+    if len(points) == 1: points = points[0]
     plt.clf()
     _xs = np.array([p['ixt'] for p in points])
     _ys = np.array([p['ity'] for p in points])
     _ls = np.array([p['layer'] for p in points])
-    for l in range(len(hs)):
+    for l in range(len(np.unique(_ls))):
         mask = _ls == l
-        plt.plot(_xs[mask], _ys[mask], color=COLORS[l])
+        plt.plot(_xs[mask], _ys[mask], color=COLORS[l], label=str(l+1))
         plt.plot(_xs[mask][0], _ys[mask][0], color=COLORS[l], marker='x')
+    plt.legend()
     plt.savefig('{}.png'.format(feature))
 
-def run(hs, gpu, epochs, snaps, batchsize, lr):
-    planes = []
+def run(gpu, epochs, snaps, batchsize, lr):
     train, test = chainer.datasets.get_mnist()
     xp = cp if gpu >=0 else np
     test_xs, test_ys = tuple2array(test, xp)
     size = 10000
     test_xs = test_xs[:size]; test_ys = test_ys[:size]
+
     bins = np.linspace(-1, 1, 30)
     Ts_index = np.array(np.linspace(0, 1, snaps) * epochs).astype(np.int)
 
-    model = MLP(hs)
+    model = CNN()
     if gpu >= 0:
         model.to_gpu()
 
@@ -87,22 +63,16 @@ def run(hs, gpu, epochs, snaps, batchsize, lr):
                                                   batch_size=batchsize)
     Ts_list = train_model(model, train_iter, test_xs, test_ys,
                           epochs, batchsize, Ts_index, lr)
-    feature = 'mi{}_epoch{}_bs{}_lr{}'.format(
-        '_'.join([str(h) for h in hs]), epochs, batchsize, lr)
-    #points = calc_mmds(to_cpu(test_xs), to_cpu(test_ys)[:, None], Ts_list)
-
-    #np.save('{}.npy'.format(feature), [points, Ts_index, hs])
-    points = calc_mi(to_cpu(test_xs), to_cpu(test_ys)[:, None],
-                     Ts_list, bins)
-    plot_planes(points, Ts_index[:-1], hs, feature)
+    points = calc_mi(to_cpu(test_xs), to_cpu(test_ys)[:, None], Ts_list, bins)
+    # points = calc_mmds(to_cpu(test_xs), to_cpu(test_ys)[:, None], Ts_list)
+    feature = 'cnn_epoch{}_bs{}_lr{}'.format(epochs, batchsize, lr)
+    plot_planes(points, Ts_index[:-1], feature)
     pr('')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--hidden', nargs='+',
-                        type=int, default=[30, 20, 15, 14, 13, 12, 11])
     parser.add_argument('--gpu', type=int, default=0)
-    parser.add_argument('--epoch', type=int, default=4000)
+    parser.add_argument('--epoch', type=int, default=10000)
     parser.add_argument('--snaps', type=int, default=50)
     parser.add_argument('--batchsize', type=int, default=128)
     parser.add_argument('--lr', type=float, default=0.01)
@@ -111,5 +81,4 @@ if __name__ == '__main__':
     if args.gpu >= 0:
         import cupy as cp
         chainer.backends.cuda.get_device_from_id(args.gpu).use()
-    run(args.hidden, args.gpu, args.epoch,
-        args.snaps, args.batchsize, args.lr)
+    run(args.gpu, args.epoch, args.snaps, args.batchsize, args.lr)
