@@ -154,8 +154,7 @@ class MLP(chainer.Chain):
         for i in range(len(self.hs) - 1):
             w = getattr(self, 'w{}'.format(i))
             b = getattr(self, 'b{}'.format(i))
-            x = F.arctan(F.linear(x, w, b))
-            # x = F.relu(F.linear(x, w, b))
+            x = F.relu(F.linear(x, w, b))
             if keep_val:
                 vals.append(x)
 
@@ -170,8 +169,14 @@ class MLP(chainer.Chain):
         else:
             return output
 
+    def norm(self, w):
+        return F.sqrt(F.sum(w * w))
+
     def loss(self, x, y):
-        return F.softmax_cross_entropy(self.forward(x), y)
+        loss = F.softmax_cross_entropy(self.forward(x), y)
+        if len(self.hs) == 2:
+            loss += 1e-1 * (self.norm(self.w0) + self.norm(self.w1))
+        return loss
 
 class CNN(chainer.Chain):
     def __init__(self):
